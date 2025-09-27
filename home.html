@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.min.js"></script>
+</head>
+<body>
+    <h1>Signify</h1>
+    <video id="webcam" autoplay width="640" height="480" style="display: none;"></video>
+    <canvas id="frameCanvas" style="display:none;"></canvas>
+    <br>
+    <button onclick="startWebcam()">Start Webcam</button>
+    <button onclick="stopWebcam()">Stop Webcam</button>
+    <h3>Server Video Frame Processed Output</h3>
+    <img id="snapshot">
+    <script src="static/home.js"></script>
+    <script>
+        let link
+        if (window.location.protocol === "https:") {
+            link = 'https://' + document.domain + ':' + location.port;
+        } else {
+            link = 'http://' + document.domain + ':' + location.port;
+        }
+        var socket = io.connect(link);
+        socket.on('connect', function() {
+            console.log('User Connected');
+        });
+
+        socket.on("modifiedFrame", function(data) {
+
+            const snapshotElement = document.getElementById('snapshot');
+            snapshotElement.src = data['frame']; // the base64 string
+        });
+    </script>
+</body>
+</html>
