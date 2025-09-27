@@ -15,6 +15,7 @@
     <button onclick="stopWebcam()">Stop Webcam</button>
     <h3>Server Video Frame Processed Output</h3>
     <img id="snapshot">
+    <p id="text">No preds yet</p>
     <script src="static/home.js"></script>
     <script>
         let link
@@ -32,6 +33,9 @@
 
             const snapshotElement = document.getElementById('snapshot');
             snapshotElement.src = data['frame']; // the base64 string
+
+            const textElement = document.getElementById("text");
+            textElement.textContent = data['pred'];
         });
     </script>
 </body>

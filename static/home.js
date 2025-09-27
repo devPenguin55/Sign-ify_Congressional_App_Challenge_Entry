@@ -41,4 +41,4 @@ function captureFrame() {
     }
 }
 
-setInterval(captureFrame, 20);
+setInterval(captureFrame, 200);
