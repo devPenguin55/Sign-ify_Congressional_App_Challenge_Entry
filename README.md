@@ -1,1 +1,1 @@
-"# CongressionalAppChallenge" 
+# CongressionalAppChallenge
