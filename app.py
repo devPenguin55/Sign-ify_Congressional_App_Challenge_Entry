@@ -10,6 +10,7 @@ import mediapipe as mp
 import cv2
 import tensorflow as tf
 import os
+from collections import Counter
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 app = Flask(__name__)
@@ -21,10 +22,13 @@ model = keras.models.load_model("ASL.h5")
 
 @app.route("/")
 def home():
+    session['stream'] = []
+    session['text'] = []
     return send_file("home.html")
 
 @socketio.on("videoFrame")
 def handleVideoFrame(data):
+    
     raw = base64.b64decode(data['encoded'].split(',')[1])
     img = Image.open(io.BytesIO(raw)).convert('L').resize((224, 224))
     img = np.array(img)
@@ -36,13 +40,13 @@ def handleVideoFrame(data):
 
     def cropHand(image):
         cropped = image[0:100, 0:100]
+        # cropped = image
         cropped = cropped[:, ::-1]
-        # cropped = cv2.imread("S_test.jpg")
 
         cropped = cv2.resize(cropped, (64,64))
         return cropped
 
-        with mp_hands.Hands(static_image_mode=True, max_num_hands=1, min_detection_confidence=0.001, min_tracking_confidence=0.001) as hands:
+        with mp_hands.Hands(static_image_mode=True, max_num_hands=1, min_detection_confidence=0.001, min_tracking_confidence=0.5) as hands:
             results = hands.process(image)
             h, w, _ = image.shape
             if results.multi_hand_landmarks:
@@ -59,12 +63,12 @@ def handleVideoFrame(data):
                 cropped = image[y_min:y_max, x_min:x_max]
 
                 print("modded", y_min, y_max, x_min, x_max)
-                cropped_resized = cv2.resize(cropped, (224,224))
+                cropped_resized = cv2.resize(cropped, (64,64))
                 return cropped_resized
             else:
-                image *= 0 
+                # image *= 0 
                 # return image
-                return cv2.resize(image, (224,224))
+                return cv2.resize(image, (64,64))
 
     def preprocessWithMediapipe(x):
         img = x.astype(np.uint8)
@@ -92,8 +96,16 @@ def handleVideoFrame(data):
     # predicted_labels = predictions.argmax(axis=1)
     labels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'del', 'nothing', 'space']
 
-    print([labels[i] for i in predictions.argsort()[-5:][::-1]])
+    actualPred = [labels[i] for i in predictions.argsort()[-5:][::-1]][0]
+    if len(session['stream']) == 50:
+        for i in range(49):
+            session['stream'][i] = session['stream'][i+1]
+        session['stream'][-1] = actualPred
+    else:
+        session['stream'].append(actualPred)
+
     
+
     img = img.squeeze(0)
     modifiedImage = Image.fromarray((img*255).astype(np.uint8))
     buffered = io.BytesIO()
@@ -101,7 +113,23 @@ def handleVideoFrame(data):
     imgBase64 = base64.b64encode(buffered.getvalue()).decode('utf-8')
     base64String = f"data:image/jpeg;base64,{imgBase64}"
 
-    response = {"frame":base64String, "pred":[labels[i] for i in predictions.argsort()[-5:][::-1]]}
+    y = Counter(session['stream'])
+    
+    mostFrequent = ''
+    if len(session['stream']) >= 20: # amt of frames to consider for frequency
+        mostFrequent = session['stream'][list(y.values()).index(max(y.values()))]
+        if mostFrequent == 'nothing':
+            pass
+        elif mostFrequent == 'space':
+            session['text'].append(' ')
+        elif mostFrequent == 'del':
+            if session['text']:
+                session['text'].pop()
+        else:
+            session['text'].append(mostFrequent)
+        session['stream'] = []
+
+    response = {"frame":base64String, "pred":''.join(session['text'])}
     socketio.emit("modifiedFrame", response)
 
 if __name__ == '__main__':
