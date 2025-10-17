@@ -1,5 +1,6 @@
-from flask import Flask, render_template, session, redirect, request, send_file, send_from_directory, jsonify
 import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from flask import Flask, render_template, session, redirect, request, send_file, send_from_directory, jsonify
 import base64
 from PIL import Image
 import io
@@ -12,13 +13,13 @@ import os
 import tempfile
 from processVideos import processVideo
 from collections import Counter
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from computeWordsFromRawPredictions import computeWordsFromRawPredictionStream
 
 app = Flask(__name__, static_folder="dist", template_folder="dist")
 app.secret_key = os.urandom(32)
 
 # model = keras.models.load_model("model.keras")
-model = keras.models.load_model("ASL.h5")
+model = keras.models.load_model("ASL_detector_CNN.h5")
 
 @app.route("/")
 def home():
@@ -48,6 +49,10 @@ def videoTranslate():
     videoFile.save(tempPath)
     
     processedVideoText = processVideo(videoPath=tempPath)
+    
+    processedVideoText = computeWordsFromRawPredictionStream([i for i in processedVideoText])
+
+
     return {"text":processedVideoText}
 
 if __name__ == '__main__':
