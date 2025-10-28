@@ -14,12 +14,47 @@ import tempfile
 from processVideos import processVideo
 from collections import Counter
 from computeWordsFromRawPredictions import computeWordsFromRawPredictionStream
+from gradio_client import Client
 
 app = Flask(__name__, static_folder="dist", template_folder="dist")
 app.secret_key = os.urandom(32)
 
-# model = keras.models.load_model("model.keras")
 model = keras.models.load_model("ASL_detector_CNN.h5")
+
+
+
+def translate_to(text1, target_language):
+
+    languageMap = {
+        "en": "English",
+        "es": "Spanish",
+        "fr": "French",
+        "de": "German",
+        "it": "Italian",
+        "pt": "Portuguese",
+        "zh": "Chinese",
+        "ja": "Japanese",
+        "ko": "Korean",
+        "ar": "Arabic"
+    }
+    target_language = languageMap[target_language]
+
+    translator = Client("UNESCO/nllb")
+    translated_text = translator.predict(
+        text=text1,
+        src_lang="English",
+        tgt_lang=target_language,
+        api_name="/translate"
+    )
+    return translated_text
+
+
+# tflite_model_path = "aslfr-fp16-192d-17l-CTCATTJointGreedy.tflite"
+# interpreter = tf.lite.Interpreter(model_path=tflite_model_path)
+# interpreter.allocate_tensors()
+# input_details = interpreter.get_input_details()
+# output_details = interpreter.get_output_details()
+
 
 @app.route("/")
 def home():
@@ -47,12 +82,14 @@ def videoTranslate():
     tempDir = tempfile.gettempdir()
     tempPath = os.path.join(tempDir, videoFile.filename)
     videoFile.save(tempPath)
+
+    print(language)
     
     processedVideoText = processVideo(videoPath=tempPath)
     
     processedVideoText = computeWordsFromRawPredictionStream([i for i in processedVideoText])
 
-
+    processedVideoText = translate_to(processedVideoText, language)
     return {"text":processedVideoText}
 
 if __name__ == '__main__':

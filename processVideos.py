@@ -32,7 +32,7 @@ def preprocessFrame(image):
             x_min, y_min = max(x_min - pad, 0), max(y_min - pad, 0)
             x_max, y_max = min(x_max + pad, w), min(y_max + pad, h)
             cropped = image[y_min:y_max, x_min:x_max]
-        else: #bejkmpqstuvwx
+        else:
             # # no hand found, return black image
             # cropped = np.zeros((64, 64, 3), dtype=np.uint8)
             cropped = image[:64, :64]
@@ -126,4 +126,4 @@ def processVideo(videoPath):
     return ''.join(finalMessage)
 
 if __name__ == "__main__":
-    processVideo()
+    processVideo("hello.mov")
